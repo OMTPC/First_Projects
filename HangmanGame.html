@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base href="https://your-hangman-adventure.com/">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HangMan Game</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #game-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        #hangman-svg {
+            width: 200px;
+            height: 250px;
+        }
+        #word-display {
+            font-size: 24px;
+            margin: 20px 0;
+            letter-spacing: 5px;
+        }
+        #letter-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 20px;
+        }
+        .letter-btn {
+            font-size: 18px;
+            width: 30px;
+            height: 30px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .letter-btn:hover {
+            background-color: #45a049;
+        }
+        .letter-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #message {
+            font-size: 18px;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        #start-btn {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #008CBA;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #start-btn:hover {
+            background-color: #007B9A;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Hangman Game: "Pharmacology Terms"</h1>
+        <svg id="hangman-svg" viewBox="0 0 200 250">
+            <!-- Base -->
+            <line x1="20" y1="230" x2="180" y2="230" stroke="black" stroke-width="4"/>
+            <!-- Vertical pole -->
+            <line x1="40" y1="230" x2="40" y2="20" stroke="black" stroke-width="4"/>
+            <!-- Horizontal pole -->
+            <line x1="40" y1="20" x2="120" y2="20" stroke="black" stroke-width="4"/>
+            <!-- Rope -->
+            <line x1="120" y1="20" x2="120" y2="50" stroke="black" stroke-width="4"/>
+            <!-- Head -->
+            <circle id="head" cx="120" cy="70" r="20" stroke="black" stroke-width="4" fill="none" visibility="hidden"/>
+            <!-- Body -->
+            <line id="body" x1="120" y1="90" x2="120" y2="150" stroke="black" stroke-width="4" visibility="hidden"/>
+            <!-- Left arm -->
+            <line id="left-arm" x1="120" y1="100" x2="90" y2="130" stroke="black" stroke-width="4" visibility="hidden"/>
+            <!-- Right arm -->
+            <line id="right-arm" x1="120" y1="100" x2="150" y2="130" stroke="black" stroke-width="4" visibility="hidden"/>
+            <!-- Left leg -->
+            <line id="left-leg" x1="120" y1="150" x2="90" y2="200" stroke="black" stroke-width="4" visibility="hidden"/>
+            <!-- Right leg -->
+            <line id="right-leg" x1="120" y1="150" x2="150" y2="200" stroke="black" stroke-width="4" visibility="hidden"/>
+        </svg>
+        <div id="word-display"></div>
+        <div id="letter-buttons"></div>
+        <div id="message"></div>
+        <button id="start-btn">Start New Game</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const hangmanParts = ['head', 'body', 'left-arm', 'right-arm', 'left-leg', 'right-leg'];
+            let currentWord = '';
+            let guessedLetters = [];
+            let remainingGuesses = 6;
+
+            function initializeGame() {
+                const words = ['Absorption', 'Distribution', 'Metabolism', 'Excretion', 'Bioavailability', 'Agonist', 'Antagonist', 'Therapeutic Index', 'Half-life', 'First-pass effect'];
+                currentWord = words[Math.floor(Math.random() * words.length)];
+                guessedLetters = [];
+                remainingGuesses = 6;
+                updateDisplay();
+                resetHangman();
+                enableAllButtons();
+            }
+
+            function updateDisplay() {
+                const wordDisplay = document.getElementById('word-display');
+                wordDisplay.textContent = currentWord
+                    .split('')
+                    .map(letter => (guessedLetters.includes(letter) ? letter : '_'))
+                    .join(' ');
+
+                const message = document.getElementById('message');
+                message.textContent = `Remaining guesses: ${remainingGuesses}`;
+            }
+
+            function resetHangman() {
+                hangmanParts.forEach(part => {
+                    document.getElementById(part).setAttribute('visibility', 'hidden');
+                });
+            }
+
+            function enableAllButtons() {
+                const buttons = document.querySelectorAll('.letter-btn');
+                buttons.forEach(button => {
+                    button.disabled = false;
+                });
+            }
+
+            function createLetterButtons() {
+                const letterButtons = document.getElementById('letter-buttons');
+                // Clear previous buttons if they exist
+                letterButtons.innerHTML = '';
+                for (let i = 65; i <= 90; i++) {
+                    const letter = String.fromCharCode(i);
+                    const button = document.createElement('button');
+                    button.textContent = letter;
+                    button.className = 'letter-btn';
+                    button.addEventListener('click', () => guessLetter(letter, button));
+                    letterButtons.appendChild(button);
+                }
+            }
+
+            function guessLetter(letter, button) {
+                if (!guessedLetters.includes(letter)) {
+                    guessedLetters.push(letter);
+                    button.disabled = true; // Disable button after clicking
+                    if (!currentWord.includes(letter)) {
+                        remainingGuesses--;
+                        updateHangman();
+                    }
+                    updateDisplay();
+                    checkGameEnd();
+                }
+            }
+
+            function updateHangman() {
+                const partToShow = hangmanParts[6 - remainingGuesses];
+                if (partToShow) {
+                    document.getElementById(partToShow).setAttribute('visibility', 'visible');
+                }
+            }
+
+            function checkGameEnd() {
+                const wordDisplay = document.getElementById('word-display');
+                const message = document.getElementById('message');
+
+                if (wordDisplay.textContent.replace(/\s/g, '') === currentWord) {
+                    message.textContent = 'Congratulations! You won!';
+                    disableAllButtons();
+                } else if (remainingGuesses === 0) {
+                    message.textContent = `Game over! The word was: ${currentWord}`;
+                    disableAllButtons();
+                }
+            }
+
+            function disableAllButtons() {
+                const buttons = document.querySelectorAll('.letter-btn');
+                buttons.forEach(button => {
+                    button.disabled = true;
+                });
+            }
+
+            // Initialize the game
+            createLetterButtons();
+            document.getElementById('start-btn').addEventListener('click', () => {
+                initializeGame();
+                createLetterButtons(); // Create letter buttons again if needed
+            });
+            initializeGame();
+        });
+    </script>
+</body>
+</html>
